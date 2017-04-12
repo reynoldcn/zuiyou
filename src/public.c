@@ -208,13 +208,15 @@ UINT readList(OUT LogItem *pstLogItem, INOUT LogList *pstList)
     
     return 0;
 }
-#if 0
+#if 1
+#define MAX_LIST 8
+extern LogList g_astList[MAX_LIST];
 void TaskMapProc(void *pArg)
 {
     Message *pstMsg = (Message*)pArg;
     UINT uiListID = 0;
     LogList *pstList = NULL;
-    LogItem *pstItem = NULL;
+    LogItem *pstItem = (LogItem*)malloc(sizeof(LogItem));
     
     assert(pstMsg != NULL);
     

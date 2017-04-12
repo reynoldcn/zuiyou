@@ -64,7 +64,7 @@ int main(int argc, const char * argv[])
     pstMsg->uiListID = 0;
     pstMsg->enMsgType = MSG_DONE;
     ListInit();
-    //pthread_create(&pth_id, NULL, (void *)TaskMapProc, (void *)pstMsg);
+    pthread_create(&pth_id, NULL, (void *)TaskMapProc, (void *)pstMsg);
     MainThread_ReadFile(filename);
     
     
