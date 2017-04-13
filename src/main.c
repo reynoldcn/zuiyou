@@ -9,7 +9,7 @@
 #include "public.h"
 #include  <pthread.h>
 
-#define DEFAULT_FILE_LOCATION "../../data/server_access.log"
+#define DEFAULT_FILE_LOCATION "./test.log"
 #define MAX_LIST 8
 LogList g_astList[MAX_LIST];
 
@@ -50,6 +50,7 @@ void MainThread_ReadFile(char *filename)
         }
             //PRINT_LOGITEM(pstLogItemNew, "get");
     }
+    sleep(10);
     fclose(fp);
     free(pstLogItem);
 }
@@ -58,7 +59,17 @@ void MainThread_ReadFile(char *filename)
 int main(int argc, const char * argv[])
 {
     
-    char *filename = DEFAULT_FILE_LOCATION;
+    char filename[DATA_LEN] = DEFAULT_FILE_LOCATION;
+    
+    if (argc == 2) {
+        strcpy(filename, argv[1]);
+    }
+    else if (argc > 2)
+    {
+        printf("Too many arguments\n");
+    }
+    printf("%d, %s, %s\n", argc, argv[0], filename);
+    //return 0;
     pthread_t pth_id = 0;
     Message *pstMsg = (Message*)malloc(sizeof(Message));
     pstMsg->uiListID = 0;

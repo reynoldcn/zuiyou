@@ -122,7 +122,7 @@ UINT Data2LogItem(IN char *szData, OUT LogItem *pstLogItem)
     UINT uiSepCount = 0;//A Counter for septarators.
     //pData = szData;
     UINT i = 0;
-    while(szData[i++])
+    while(szData[i])
     {
         if(BUF_SIZE == i + 1)
         {
@@ -157,7 +157,7 @@ UINT Data2LogItem(IN char *szData, OUT LogItem *pstLogItem)
         {
             szBuf[uiBufIdx++] = szData[i];
         }
-        
+        i++;
     }
     szBuf[uiBufIdx] = '\0';
     pstLogItem->fResponseTime = Sz2Float(szBuf, uiBufIdx);
