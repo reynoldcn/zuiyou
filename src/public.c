@@ -361,6 +361,11 @@ void TaskReduceProc(void *pArg)
         }
     }
     ProcessResult(pstHead);
+    
+    for (pstNode = pstHead; pstNode != NULL; pstNode = pstNode->next)
+    {
+        free(pstNode);
+    }
 }
 
 
