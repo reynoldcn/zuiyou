@@ -320,7 +320,7 @@ void TaskReduceProc(void *pArg)
             while (pstNode != NULL)
             {
                 if(pstNode->val->uiCountTotal
-                    <= pstRes->uiCountTotal)
+                    >= pstRes->uiCountTotal)
                 {
                     if (pstNode->next == NULL) {
                         pstNext = malloc(sizeof(ListNode));
