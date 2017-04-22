@@ -33,29 +33,28 @@ static inline float Sz2Float(char szBuf[BUF_SIZE], UINT uiLen)
     float fRet = 0;
     int i = uiLen - 1;
     float digit = 1;
-    //DBG("szBuf = %s\n", szBuf);
     for(; i >= 0; --i)
     {
-        //DBG("c = %c ", szBuf[i]);
         if(szBuf[i] == '.')
         {
             fRet = fRet / digit;
             digit = 1;
-            //DBG(" f = %f\n", fRet);
             continue;
         }
-        //if (szBuf[i] >= '0' && szBuf[i] <= '9')
         if(IS_NUM(szBuf[i]))
         {
             fRet += digit * (szBuf[i] - '0');
             digit *= 10;
         }
-
-        //DBG(" f = %f\n", fRet);
     }
     return fRet;
 }
-
+/*
+最初设计的时候把日期当成一个很重要的参数来看待的，
+很快我发现对本题来说日期根本没啥用
+so 保留一个DETAIL_DATE模式，不过并没有实现好，
+Please Ignore This Func
+*/
 #ifdef DETAIL_DATE
 UINT Data2Date(IN char szData[BUF_SIZE], OUT Date *pstDate)
 {
@@ -165,7 +164,11 @@ UINT Data2LogItem(IN char *szData, OUT LogItem *pstLogItem)
     pstLogItem->fResponseTime = Sz2Float(szBuf, uiBufIdx);
     return ERROR_SUCCESS;
 }
-
+/*
+write和read部分我参照无锁结构体，循环缓冲区的思想，进行设计的。
+因为在这个proj里同一时刻对于一个队列来说，只有1个读者，1个写者。
+那么只要保证读者操作到的索引，永远在写索引后面，就ok了
+*/
 UINT writeList(IN LogItem *pstLogItem, INOUT LogList *pstList)
 {
     UINT uiRead = pstList->uiReadIdx;
@@ -192,21 +195,15 @@ UINT readList(OUT LogItem *pstLogItem, INOUT LogList *pstList)
     LogItem *pstItem2Read = NULL;
     
     if (uiWrite == uiRead)
-    {
+    {//此时说明当前队列里没有可读的元素了
         //DBG("No More Stuff to Read\n");
         return ERROR_FAILED;
     }
-    /*
-    if((uiWrite == 0 && uiRead == uiMax - 1)
-       ||(uiWrite == uiRead + 1))
-    {
-        return ERROR_FAILED;
-    }
-    */
  
     pstItem2Read = &pstList->astData[uiRead];
 
     memcpy(pstLogItem, pstItem2Read, sizeof(LogItem));
+    //为了确保不会重复读，把每次读完的元素都清零
     memset(pstItem2Read, 0, sizeof(LogItem));
     pstList->uiReadIdx = (++uiRead == uiMax)? 0 : uiRead;
     
@@ -219,14 +216,11 @@ extern LogHashNode g_astHashTable[HASH_LEN];
 extern char g_done[MAX_LIST+1]; 
 void TaskMapProc(void *pArg)
 {
-    //Message stMsg = *(Message*)pArg;
     UINT uiListID = 0;
     LogList *pstList = NULL;
     LogItem *pstItem = (LogItem*)malloc(sizeof(LogItem));
-    
-    //assert(pstMsg != NULL);
-    
-    uiListID = (UINT)(ULONG)pArg;
+
+    uiListID = (UINT)(ULONG)pArg;   //参数就是该线程要处理的队列号
     pstList = &g_astList[uiListID];
     
     assert(pstList != NULL);
@@ -254,9 +248,11 @@ typedef struct tagListNode{
     LogResult *val;
     struct tagListNode *next;
 }ListNode;
-//int listlen = 0;
-//int notinsert = 0;
 
+//用于处理结果值的，此时传入一个已经排好序的链表
+//对于本题，我的做法是把结果写入一个output.txt
+//文件里，其格式为：
+//接口名 访问次数 平均相应时间 超过0.1s的次数
 static inline void ProcessResult(ListNode *pstHead)
 {
     FILE *fp = NULL;
@@ -311,18 +307,17 @@ void TaskReduceProc(void *pArg)
             pstNode->val = &pstHashNode->stValue;
             pstNode->next = NULL;
             pstHead = pstNode;
-            //listlen++;
         }
         else
         {
             pstNode = pstHead;
             bInsert = 0;
-            while (pstNode != NULL)
+            while (pstNode != NULL)             //遍历当前的链表
             {
                 if(pstNode->val->uiCountTotal
-                    >= pstRes->uiCountTotal)
+                    >= pstRes->uiCountTotal)    //如果新节点比当前遍历到的链表节点小，就插入该节点的前面
                 {
-                    if (pstNode->next == NULL) {
+                    if (pstNode->next == NULL) {//如果此时已经遍历到链表的最后了，直接插到最后位置
                         pstNext = malloc(sizeof(ListNode));
                         pstNext->val = pstRes;
                         pstNext->next = NULL;
@@ -330,7 +325,8 @@ void TaskReduceProc(void *pArg)
                     }
                     else
                     {
-                        pstNext = pstNode->next;
+                        pstNext = pstNode->next;//先插到该节点后面，然后交换它们的val，就相当于插了
+                                                //一个新节点在当前节点前面
                         pstNode->next = malloc(sizeof(ListNode));
                         pstNode->next->next = pstNext;
                         pstNode->next->val = pstRes;
