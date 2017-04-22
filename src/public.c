@@ -315,7 +315,7 @@ void TaskReduceProc(void *pArg)
             while (pstNode != NULL)             //遍历当前的链表
             {
                 if(pstNode->val->uiCountTotal
-                    >= pstRes->uiCountTotal)    //如果新节点比当前遍历到的链表节点小，就插入该节点的前面
+                    <= pstRes->uiCountTotal)    //如果新节点比当前遍历到的链表节点大，就插入该节点的前面
                 {
                     if (pstNode->next == NULL) {//如果此时已经遍历到链表的最后了，直接插到最后位置
                         pstNext = malloc(sizeof(ListNode));
