@@ -8,6 +8,7 @@
 
 
 #include "public.h"
+#include "hash.h"
 //#include <unistd.h>
 #define BUF_SIZE 128
 #define IS_NUM(x) ((x)>='0'&&(x)<='9')
@@ -158,6 +159,7 @@ UINT Data2LogItem(IN char *szData, OUT LogItem *pstLogItem)
             szBuf[uiBufIdx++] = szData[i];
         }
         i++;
+        
     }
     szBuf[uiBufIdx] = '\0';
     pstLogItem->fResponseTime = Sz2Float(szBuf, uiBufIdx);
@@ -191,7 +193,7 @@ UINT readList(OUT LogItem *pstLogItem, INOUT LogList *pstList)
     
     if (uiWrite == uiRead)
     {
-        DBG("No More Stuff to Read\n");
+        //DBG("No More Stuff to Read\n");
         return ERROR_FAILED;
     }
     /*
@@ -202,38 +204,167 @@ UINT readList(OUT LogItem *pstLogItem, INOUT LogList *pstList)
     }
     */
  
-    pstItem2Read = &pstList->astData[uiRead];    
+    pstItem2Read = &pstList->astData[uiRead];
+
     memcpy(pstLogItem, pstItem2Read, sizeof(LogItem));
+    memset(pstItem2Read, 0, sizeof(LogItem));
     pstList->uiReadIdx = (++uiRead == uiMax)? 0 : uiRead;
     
     return 0;
 }
-#if 1
+
 #define MAX_LIST 8
 extern LogList g_astList[MAX_LIST];
+extern LogHashNode g_astHashTable[HASH_LEN];
+extern char g_done[MAX_LIST+1]; 
 void TaskMapProc(void *pArg)
 {
-    Message *pstMsg = (Message*)pArg;
+    //Message stMsg = *(Message*)pArg;
     UINT uiListID = 0;
     LogList *pstList = NULL;
     LogItem *pstItem = (LogItem*)malloc(sizeof(LogItem));
     
-    assert(pstMsg != NULL);
+    //assert(pstMsg != NULL);
     
-    uiListID = pstMsg->uiListID;
+    uiListID = (UINT)(ULONG)pArg;
     pstList = &g_astList[uiListID];
     
     assert(pstList != NULL);
-    
-    for (; ; ) {
+    DBG("Starting Thread%d\n", uiListID);
+    for (; ; )
+    {
         if (ERROR_SUCCESS == readList(pstItem, pstList))
         {
-            PRINT_LOGITEM(pstItem, "Thread Get");
+            if(pstItem->fResponseTime < 0)
+            {
+                DBG("Stop Thread%d\n", uiListID);
+                break;
+            }
+            HashTable_Update(g_astHashTable, pstItem, HASH_LEN);
         }
         else
         {
-            sleep(1);
+            usleep(1000);
         }
     }
+    g_done[uiListID] = '1';
 }
+
+typedef struct tagListNode{
+    LogResult *val;
+    struct tagListNode *next;
+}ListNode;
+//int listlen = 0;
+//int notinsert = 0;
+
+static inline void ProcessResult(ListNode *pstHead)
+{
+    FILE *fp = NULL;
+    LogResult *pstRes = NULL;
+#define DATA_LEN 128
+    char szLine[DATA_LEN] = {0};
+    
+    if((fp = fopen("Output.txt", "w")) == NULL)
+    {
+        DBG("File cannot be opened\n");
+        return;
+    }
+    else
+    {
+        DBG("Writing Report\n");
+    }
+    for (ListNode *pstNode = pstHead; pstNode != NULL; pstNode = pstNode->next)
+    {
+        pstRes = pstNode->val;
+        snprintf(szLine, DATA_LEN, "%s %d %f %d\n", pstRes->szIntfName,
+                 pstRes->uiCountTotal,
+                 pstRes->fResponseTimeTotal/pstRes->uiCountTotal,
+                 pstRes->uiCountTimeOut);
+        fputs(szLine, fp);
+        //DBG("%s, %d, %f\n", pstRes->szIntfName, pstRes->uiCountTotal, pstRes->fResponseTimeTotal);
+    }
+    fclose(fp);
+    //DBG("%d, %d\n", listlen, notinsert);
+}
+void TaskReduceProc(void *pArg)
+{
+    ListNode *pstNode = NULL;
+    ListNode *pstNext = NULL;
+    ListNode *pstHead = NULL;
+    LogHashNode *pstHashNode = NULL;
+    LogResult *pstRes = NULL;
+    UINT i = 0;
+    UINT bFirstHit = 1;
+    UINT bInsert = 0;
+    for (; i < HASH_LEN; ++i)
+    {
+        pstHashNode = &g_astHashTable[i];
+        pstRes = &pstHashNode->stValue;
+        if (!pstHashNode->bExists)
+        {
+            continue;
+        }
+        if (bFirstHit)
+        {
+            bFirstHit = 0;
+            pstNode = malloc(sizeof(ListNode));
+            pstNode->val = &pstHashNode->stValue;
+            pstNode->next = NULL;
+            pstHead = pstNode;
+            //listlen++;
+        }
+        else
+        {
+            pstNode = pstHead;
+            bInsert = 0;
+            while (pstNode != NULL)
+            {
+                if(pstNode->val->uiCountTotal
+                    <= pstRes->uiCountTotal)
+                {
+                    if (pstNode->next == NULL) {
+                        pstNext = malloc(sizeof(ListNode));
+                        pstNext->val = pstRes;
+                        pstNext->next = NULL;
+                        pstNode->next = pstNext;
+                    }
+                    else
+                    {
+                        pstNext = pstNode->next;
+                        pstNode->next = malloc(sizeof(ListNode));
+                        pstNode->next->next = pstNext;
+                        pstNode->next->val = pstRes;
+                        pstNext = pstNode->next;
+                    }
+                    //listlen++;
+                    LogResult *pstTemp = pstNode->val;
+                    pstNode->val = pstNext->val;
+                    pstNext->val = pstTemp;
+                    bInsert = 1;
+                    break;
+                }
+                pstNext = pstNode;              //I am still wondering here
+                                                //though it must be a simple shit
+                pstNode = pstNode->next;
+            }
+            if (!bInsert) {
+#if 0
+                pstNode = malloc(sizeof(ListNode));
+                pstNode->val = pstRes;
+                pstNode->next = NULL;
+#else
+                //printf("%p, %p\n", pstNext->next, pstNode);
+                pstNext->next = malloc(sizeof(ListNode));
+                pstNext->next->val = pstRes;
+                pstNext->next->next = NULL;
 #endif
+                //notinsert++;
+                //listlen++;
+            }
+            
+        }
+    }
+    ProcessResult(pstHead);
+}
+
+

@@ -17,9 +17,12 @@
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define DATA_LEN 128
 #define KFIFO_LEN 128
+
+#define TIMEOUT 0.1f
 
 #define IN
 #define OUT
@@ -41,6 +44,7 @@
 #endif
 
 typedef unsigned int UINT;
+typedef unsigned long ULONG;
 
 typedef struct tagDate{
     UINT uiYear;
@@ -89,4 +93,30 @@ typedef struct tagMessage{
 
 void TaskMapProc(void *pArg);
 void TaskReduceProc(void *pArg);
+
+
+typedef struct tagLogResult{
+    UINT uiCountTotal;
+    UINT uiCountTimeOut;
+    float fResponseTimeTotal;
+    char szIntfName[DATA_LEN];
+}LogResult;
+
+typedef struct tagLogHashNode{
+    UINT uiHashA;
+    UINT uiHashB;
+    UINT uiHashC;
+    int bExists;
+
+    pthread_mutex_t lock;   //Actually spinlock fits this project more,
+                            //however my MacOS unsupports it. 
+    LogResult stValue;
+}LogHashNode;
+
+
+//UINT hash_get(IN LogHash *pstHash, IN LogItem *key, OUT LogResult *value);
+//UINT hash_put(IN LogHash *pstHash, IN LogItem *key, IN LogResult *value);
+//UINT hash_contains(IN LogHash *pstHash, IN LogItem *key);
+
+
 #endif

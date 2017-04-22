@@ -1,0 +1,4 @@
+/post/httpapi/get_post_by_pids 6 0.004000 0
+/post/httpapi/get_member_favors 5 0.004400 0
+/post/httpapi/get_member_like_data 4 0.005500 0
+/post/api 2 0.005000 0
