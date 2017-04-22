@@ -47,7 +47,13 @@ static inline int GetHashTablePos(IN LogHashNode astHashTable[],
     }
     return -uiHashPos; //Error value
 }
-
+/*
+以上hash算法是百度到的，据说是Blizzard用的hash算法。
+其思路很简单，对每个字符串求三个hash值，如果两个字符串三个hash值都相等，
+那么这两个字符串不相等的概率小于10的负20次方（？大概这个数）
+ps：其实我们题目里只有20个不同的接口，这样算法只针对这个题目来说的话有点过分了。
+ps：But my program is extremly rigorous XD.
+*/
 int HashTable_Update(INOUT LogHashNode astHashTable[], IN LogItem *pstKey, IN UINT uiSize)
 {
     int iPos = 0;
@@ -60,8 +66,8 @@ int HashTable_Update(INOUT LogHashNode astHashTable[], IN LogItem *pstKey, IN UI
     UINT *puiCountTimeOut;
     float *pfResponseTimeTotal;
     iPos = GetHashTablePos(astHashTable, pstKey->szIntfName, uiSize);
-    pthread_mutex_lock (&astHashTable[abs(iPos)].lock);
-    if (iPos < 0)
+    pthread_mutex_lock (&astHashTable[abs(iPos)].lock); //不知道iPos是正数还是负数，先取绝对值再说。
+    if (iPos < 0)                                       //如果是新插入hash表的字符串，会返回其位置的相反数
     {
         //DBG("New LogItem\n");
         iPos = 0 - iPos;
@@ -87,7 +93,7 @@ int HashTable_Update(INOUT LogHashNode astHashTable[], IN LogItem *pstKey, IN UI
     if (pstKey->fResponseTime >= TIMEOUT) {
         *puiCountTimeOut += 1;
     }
-    pthread_mutex_unlock (&astHashTable[iPos].lock);
+    pthread_mutex_unlock (&astHashTable[iPos].lock);    //此时iPos肯定是正数了。
     return iPos;
     
 }
