@@ -118,7 +118,7 @@ int main(int argc, const char * argv[])
     {
         printf("Too many arguments\n");
     }
-    printf("%d, %s, %s\n", argc, argv[0], filename);
+    //printf("%d, %s, %s\n", argc, argv[0], filename);
 #endif
 
     ListInit();
