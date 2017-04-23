@@ -77,6 +77,10 @@ void MainThread_ReadFile(char *filename)
     while(!feof(fp))
     {
         fgets(szLine, DATA_LEN, fp);
+        if (feof(fp))
+        {
+            break;
+        }
         //printf("%s\n", szLine);
         Data2LogItem(szLine, pstLogItem);
         while(ERROR_FAILED == writeList(pstLogItem, &g_astList[flag]))
