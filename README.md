@@ -6,12 +6,22 @@ http://www.ixiaochuan.cn/school/2017/index.html  #Q1 #Log Analysis
 I develop it on Mac OS. It is theoretically executable on Linux but not expected.
 
 I have simply written a Makefile to build this project.
+
 You will find an executable file named main in the same directory after typing "make".
+
 Have it executed by typing:
+
 ./main ~/Desktop/server_access.log
+
 Then it will be processing data in ~/Desktop/server_access.log
 
+Update 2017/4/24
+
+之前说的bug解决。读取文档的时候如果使用feof判断是否读完，只有当#读到文档末尾并再次发生读写操作的时候#才会返回EOF，
+导致最后一行读两遍。为了解决这个问题需要在读完文档后额外加一步判定。
+
 Update 2017/4/23
+
 先说结果，运行时间在1-2s，会输出一个output.txt的文件，输出格式为：
 
 接口名 访问次数 平均时间 响应时间超过0.1s的次数
@@ -24,6 +34,7 @@ Update 2017/4/23
 
 分线程统计处理好后填入一个统一的全局变量。简单构图如下：
 
+   
     ——————> thread_1 ——————> 
     
 log ——————> thread_2 ——————> Result List
