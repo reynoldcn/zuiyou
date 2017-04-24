@@ -88,7 +88,7 @@ void MainThread_ReadFile(char *filename)
             //usleep(1000);
             //DBG("failed write\n");
             flag++;
-            flag %= 4;
+            flag %= MAX_LIST;
         }
         
             //PRINT_LOGITEM(pstLogItemNew, "get");
