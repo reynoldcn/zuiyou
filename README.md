@@ -15,6 +15,12 @@ Have it executed by typing:
 
 Then it will be processing data in ~/Desktop/server_access.log
 
+Update 2017/4/24.2
+
+补充一下空间效率的分析，整体来看空间只取决于接口的数目，和起的线程数，与log的条目数无关。本题有20个接口，无论是100000条数据，还是200000条数据，空间都是一样的。
+
+另外不是线程起的越多越好，在数据不太大的情况下，太多线程反而影响效率。
+
 Update 2017/4/24
 
 之前说的bug解决。读取文档的时候如果使用feof判断是否读完，只有当#读到文档末尾并再次发生读写操作的时候#才会返回EOF，
